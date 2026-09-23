@@ -16,8 +16,8 @@ button:active{background:#f4f4f4}
 </head>
 <body>
 <svg id="stage" viewBox="0 0 1000 680" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-  <path id="guide" class="guide" d="M220 306 L310 306 L220 374 L304 456 L438 542 L610 500 L804 398 L804 282 L620 184 L452 140 L304 220 Z"/>
-  <path id="body" class="body" d="M220 306 L310 306 L310 374 L220 374 L304 456 Q356 528 438 542 L610 500 Q716 470 804 398 L804 282 Q716 210 620 184 L452 140 Q356 152 304 220 L220 306 Z"/>
+  <path id="guide" class="guide" d="M220 306 L310 306 L220 374 L304 456 L438 542 L610 500 L790 420 L706 370 L804 400 L778 352 L720 340 L778 328 L804 280 L706 310 L790 260 L620 184 L452 140 L304 220 Z"/>
+  <path id="body" class="body" d="M220 306 L310 306 L310 374 L220 374 L304 456 Q356 528 438 542 L610 500 Q700 470 790 420 L706 370 Q760 400 804 400 L778 352 L720 340 L778 328 L804 280 Q760 280 706 310 L790 260 Q710 210 620 184 L452 140 Q356 152 304 220 L220 306 Z"/>
 </svg>
 <button id="regen">再生成</button>
 <script>
@@ -37,76 +37,90 @@ button:active{background:#f4f4f4}
     const notchHalf=pick([28,32,36]);
     const notchDepth=pick([74,86,98]);
     const innerX=tailX+notchDepth;
-
-    const family=Math.floor(Math.random()*4);
     const span=neckX-tailX;
+    const family=Math.floor(Math.random()*4);
 
-    let rearLower, lowerApex, lowerWaist, neckLower;
-    let neckUpper, upperWaist, upperApex, rearUpper;
+    let rearLower, lowerApex, lowerWaist;
+    let upperWaist, upperApex, rearUpper;
 
     if(family===0){
-      // long lower wedge, compact upper shoulder
       rearLower=P(tailX+r(.12,.17)*span,cy+r(104,132));
       lowerApex=P(tailX+r(.32,.40)*span,cy+r(188,220));
-      lowerWaist=P(tailX+r(.60,.68)*span,cy+r(142,174));
-      upperWaist=P(tailX+r(.62,.70)*span,cy-r(118,150));
+      lowerWaist=P(tailX+r(.58,.66)*span,cy+r(136,168));
+      upperWaist=P(tailX+r(.60,.68)*span,cy-r(116,148));
       upperApex=P(tailX+r(.34,.42)*span,cy-r(172,204));
       rearUpper=P(tailX+r(.13,.18)*span,cy-r(112,140));
     }else if(family===1){
-      // asymmetric faceted diamond
       rearLower=P(tailX+r(.14,.20)*span,cy+r(126,158));
       lowerApex=P(tailX+r(.38,.46)*span,cy+r(178,210));
-      lowerWaist=P(tailX+r(.65,.72)*span,cy+r(112,146));
-      upperWaist=P(tailX+r(.57,.64)*span,cy-r(154,186));
+      lowerWaist=P(tailX+r(.62,.69)*span,cy+r(110,144));
+      upperWaist=P(tailX+r(.55,.63)*span,cy-r(150,182));
       upperApex=P(tailX+r(.29,.36)*span,cy-r(206,232));
       rearUpper=P(tailX+r(.12,.17)*span,cy-r(96,124));
     }else if(family===2){
-      // narrow waist, broad tail geometry
       rearLower=P(tailX+r(.11,.16)*span,cy+r(146,174));
       lowerApex=P(tailX+r(.27,.34)*span,cy+r(204,228));
-      lowerWaist=P(tailX+r(.58,.64)*span,cy+r(118,142));
-      upperWaist=P(tailX+r(.58,.64)*span,cy-r(118,142));
+      lowerWaist=P(tailX+r(.56,.63)*span,cy+r(116,140));
+      upperWaist=P(tailX+r(.56,.63)*span,cy-r(116,140));
       upperApex=P(tailX+r(.27,.34)*span,cy-r(204,228));
       rearUpper=P(tailX+r(.11,.16)*span,cy-r(146,174));
     }else{
-      // offset blade: upper mass forward, lower mass rearward
       rearLower=P(tailX+r(.13,.19)*span,cy+r(120,150));
       lowerApex=P(tailX+r(.29,.37)*span,cy+r(190,218));
-      lowerWaist=P(tailX+r(.61,.68)*span,cy+r(154,182));
-      upperWaist=P(tailX+r(.68,.75)*span,cy-r(104,132));
+      lowerWaist=P(tailX+r(.59,.67)*span,cy+r(150,180));
+      upperWaist=P(tailX+r(.64,.72)*span,cy-r(104,132));
       upperApex=P(tailX+r(.40,.48)*span,cy-r(188,218));
       rearUpper=P(tailX+r(.15,.20)*span,cy-r(132,162));
     }
-
-    neckLower=P(neckX,cy+pick([54,60,66,72]));
-    neckUpper=P(neckX,cy-pick([54,60,66,72]));
 
     const tailTop=P(tailX,cy-notchHalf);
     const notchTop=P(innerX,cy-notchHalf);
     const notchBottom=P(innerX,cy+notchHalf);
     const tailBottom=P(tailX,cy+notchHalf);
 
-    // Control points are derived from neighboring vertices, not independent random blobs.
-    const cLower1=P((rearLower[0]+lowerApex[0])*.5, lowerApex[1]+r(-8,18));
-    const cLower2=P((lowerWaist[0]+neckLower[0])*.5, lowerWaist[1]+r(-18,10));
-    const cUpper2=P((upperWaist[0]+neckUpper[0])*.5, upperWaist[1]+r(-10,18));
-    const cUpper1=P((rearUpper[0]+upperApex[0])*.5, upperApex[1]+r(-18,8));
+    const cLower1=P((rearLower[0]+lowerApex[0])*.5,lowerApex[1]+r(-8,18));
+    const cUpper1=P((rearUpper[0]+upperApex[0])*.5,upperApex[1]+r(-18,8));
 
-    // Solid outline: deliberately alternates hard edges and restrained curves.
+    // Neck-side architecture. Cutaways are structural, not decorative notches.
+    const cutMode=pick(['upper','double','double','deep','angular']);
+    const hornReach=pick([0,8,16,24]);
+    const jointHalf=pick([15,18,21]);
+    const upperHorn=P(neckX+hornReach,cy-pick([62,70,78,86]));
+    const lowerHorn=P(neckX+hornReach,cy+pick([62,70,78,86]));
+    const upperJoint=P(neckX-pick([8,12,16]),cy-jointHalf);
+    const lowerJoint=P(neckX-pick([8,12,16]),cy+jointHalf);
+
+    let upperDepth=pick([58,72,88,104]);
+    let lowerDepth=pick([54,68,82,96]);
+    if(cutMode==='deep'){upperDepth+=36;lowerDepth+=22;}
+
+    const upperValley=P(neckX-upperDepth,cy-pick([30,36,42,48]));
+    const lowerValley=P(neckX-lowerDepth,cy+pick([30,36,42,48]));
+    const lowerShoulder=P(neckX-r(90,132),cy+r(100,142));
+    const upperShoulder=P(neckX-r(90,132),cy-r(100,142));
+
+    let neckSolid='';
+    let neckGuide=[];
+
+    if(cutMode==='upper'){
+      const lowerEdge=P(neckX,cy+pick([56,64,72]));
+      neckSolid=` Q ${s(lowerShoulder)} ${s(lowerEdge)} L ${s(lowerJoint)} L ${s(upperValley)} Q ${s(upperHorn)} ${s(upperHorn)} L ${s(upperShoulder)}`;
+      neckGuide=[lowerShoulder,lowerEdge,lowerJoint,upperValley,upperHorn,upperShoulder];
+    }else if(cutMode==='angular'){
+      neckSolid=` L ${s(lowerShoulder)} L ${s(lowerHorn)} L ${s(lowerValley)} L ${s(lowerJoint)} L ${s(upperJoint)} L ${s(upperValley)} L ${s(upperHorn)} L ${s(upperShoulder)}`;
+      neckGuide=[lowerShoulder,lowerHorn,lowerValley,lowerJoint,upperJoint,upperValley,upperHorn,upperShoulder];
+    }else{
+      neckSolid=` Q ${s(lowerShoulder)} ${s(lowerHorn)} L ${s(lowerValley)} Q ${s(lowerJoint)} ${s(lowerJoint)} L ${s(upperJoint)} Q ${s(upperValley)} ${s(upperValley)} L ${s(upperHorn)} Q ${s(upperShoulder)} ${s(upperShoulder)}`;
+      neckGuide=[lowerShoulder,lowerHorn,lowerValley,lowerJoint,upperJoint,upperValley,upperHorn,upperShoulder];
+    }
+
     let d=`M ${s(tailTop)} L ${s(notchTop)} L ${s(notchBottom)} L ${s(tailBottom)}`;
-    d+=` L ${s(rearLower)}`;
-    d+=` Q ${s(cLower1)} ${s(lowerApex)}`;
-    d+=` L ${s(lowerWaist)}`;
-    d+=` Q ${s(cLower2)} ${s(neckLower)}`;
-    d+=` L ${s(neckUpper)}`;
-    d+=` Q ${s(cUpper2)} ${s(upperWaist)}`;
-    d+=` L ${s(upperApex)}`;
-    d+=` Q ${s(cUpper1)} ${s(rearUpper)}`;
-    d+=` L ${s(tailTop)} Z`;
+    d+=` L ${s(rearLower)} Q ${s(cLower1)} ${s(lowerApex)} L ${s(lowerWaist)}`;
+    d+=neckSolid;
+    d+=` L ${s(upperWaist)} L ${s(upperApex)} Q ${s(cUpper1)} ${s(rearUpper)} L ${s(tailTop)} Z`;
     body.setAttribute('d',d);
 
-    // Dotted construction = the actual geometric skeleton/control polygon. No circles.
-    const gd=[tailTop,notchTop,notchBottom,tailBottom,rearLower,cLower1,lowerApex,lowerWaist,cLower2,neckLower,neckUpper,cUpper2,upperWaist,upperApex,cUpper1,rearUpper,tailTop];
+    const gd=[tailTop,notchTop,notchBottom,tailBottom,rearLower,cLower1,lowerApex,lowerWaist,...neckGuide,upperWaist,upperApex,cUpper1,rearUpper,tailTop];
     guide.setAttribute('d','M '+gd.map(s).join(' L '));
   }
 
