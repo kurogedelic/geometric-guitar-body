@@ -8,180 +8,195 @@
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff}
 body{display:flex;flex-direction:column}
 svg{flex:1;width:100%;min-height:0;display:block;background:#fff}
-.guide{fill:none;stroke:#000;stroke-width:1;stroke-dasharray:5 7;opacity:.42;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
+.guide{fill:none;stroke:#000;stroke-width:1;stroke-dasharray:5 7;opacity:.46;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
 .body{fill:none;stroke:#000;stroke-width:2.2;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
 button{appearance:none;width:100%;border:0;border-top:1px solid #000;border-radius:0;background:#fff;color:#000;font:16px -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;padding:16px 0 calc(16px + env(safe-area-inset-bottom));cursor:pointer}
 button:active{background:#f4f4f4}
 </style>
 </head>
 <body>
-<svg viewBox="0 0 1000 680" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-  <path id="guide" class="guide" d="M260 195 L430 130 L650 195 L825 165 L710 292 L800 318 L800 362 L700 392 L825 478 L600 520 L390 540 L260 480 L205 430 L315 390 L280 340 L315 290 L205 250 Z"/>
-  <path id="body" class="body" d="M260 195 L430 130 L650 195 L825 165 L710 292 Q760 318 800 318 L800 362 Q758 362 700 392 L825 478 L600 520 L390 540 L260 480 L205 430 L315 390 L280 340 L315 290 L205 250 Z"/>
+<svg id="stage" viewBox="0 0 1000 680" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+  <g id="guideGroup"></g>
+  <path id="body" class="body"></path>
 </svg>
 <button id="regen">再生成</button>
 <script>
 (()=>{
+  const NS='http://www.w3.org/2000/svg';
+  const guideGroup=document.getElementById('guideGroup');
   const body=document.getElementById('body');
-  const guide=document.getElementById('guide');
-  const r=(a,b)=>a+Math.random()*(b-a);
-  const pick=a=>a[Math.floor(Math.random()*a.length)];
-  const q=v=>Math.round(v/4)*4;
-  const P=(x,y)=>[q(x),q(y)];
-  const S=p=>`${p[0]} ${p[1]}`;
 
-  function tail(mode,topRear,bottomRear,cy){
-    const tx=Math.min(topRear[0],bottomRear[0])-pick([36,48,60]);
-    const depth=pick([72,88,104,120]);
-    let pts=[];
-    if(mode===0){
-      pts=[bottomRear,P(tx,cy+92),P(tx+depth,cy+48),P(tx+depth,cy-48),P(tx,cy-92),topRear];
-    }else if(mode===1){
-      pts=[bottomRear,P(tx,cy+104),P(tx+depth+12,cy+68),P(tx+depth-26,cy+18),P(tx+depth-26,cy-18),P(tx+depth+12,cy-68),P(tx,cy-104),topRear];
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const rnd=(a,b)=>a+Math.random()*(b-a);
+  const q=(v,s=2)=>Math.round(v/s)*s;
+  const P=(x,y)=>({x:q(x),y:q(y)});
+
+  function addCircle(c){
+    const e=document.createElementNS(NS,'circle');
+    e.setAttribute('class','guide');
+    e.setAttribute('cx',c.cx);
+    e.setAttribute('cy',c.cy);
+    e.setAttribute('r',c.r);
+    guideGroup.appendChild(e);
+  }
+  function addLine(a,b){
+    const e=document.createElementNS(NS,'line');
+    e.setAttribute('class','guide');
+    e.setAttribute('x1',a.x); e.setAttribute('y1',a.y);
+    e.setAttribute('x2',b.x); e.setAttribute('y2',b.y);
+    guideGroup.appendChild(e);
+  }
+  function addCross(p){
+    addLine(P(p.x-5,p.y),P(p.x+5,p.y));
+    addLine(P(p.x,p.y-5),P(p.x,p.y+5));
+  }
+  function pathFromPts(pts){
+    if(!pts.length) return '';
+    let d=`M ${pts[0].x} ${pts[0].y}`;
+    for(let i=1;i<pts.length;i++) d+=` L ${pts[i].x} ${pts[i].y}`;
+    return d+' Z';
+  }
+  function circlePoint(c,deg){
+    const t=deg*Math.PI/180;
+    return P(c.cx + c.r*Math.cos(t), c.cy + c.r*Math.sin(t));
+  }
+  function verticalCirclePoint(c, y, side=1){
+    const dy=y-c.cy;
+    const dx=Math.sqrt(Math.max(0,c.r*c.r-dy*dy));
+    return P(c.cx+side*dx, y);
+  }
+  function circleIntersection(c1,c2,preferUpper=false){
+    const dx=c2.cx-c1.cx, dy=c2.cy-c1.cy;
+    const d=Math.hypot(dx,dy);
+    if(!d) return P(c1.cx,c1.cy);
+    const a=(c1.r*c1.r-c2.r*c2.r+d*d)/(2*d);
+    const h=Math.sqrt(Math.max(0,c1.r*c1.r-a*a));
+    const xm=c1.cx+a*dx/d;
+    const ym=c1.cy+a*dy/d;
+    const rx=-dy*(h/d), ry=dx*(h/d);
+    const p1=P(xm+rx,ym+ry), p2=P(xm-rx,ym-ry);
+    return preferUpper ? (p1.y<p2.y?p1:p2) : (p1.y>p2.y?p1:p2);
+  }
+  function angle(c,p){ return Math.atan2(p.y-c.cy,p.x-c.cx); }
+  function sampleArc(c,p0,p1,dir='cw',steps=18){
+    let a0=angle(c,p0), a1=angle(c,p1);
+    const TAU=Math.PI*2;
+    if(dir==='cw'){
+      while(a1<a0) a1+=TAU;
     }else{
-      pts=[bottomRear,P(tx+8,cy+104),P(tx+depth,cy+52),P(tx+depth-34,cy),P(tx+depth+16,cy-48),P(tx,cy-96),topRear];
+      while(a1>a0) a1-=TAU;
+    }
+    const pts=[];
+    for(let i=0;i<=steps;i++){
+      const t=i/steps;
+      const a=a0+(a1-a0)*t;
+      pts.push(P(c.cx+c.r*Math.cos(a), c.cy+c.r*Math.sin(a)));
     }
     return pts;
   }
-
-  function polyGuide(points){
-    return 'M '+points.map(S).join(' L ');
+  function combine(){
+    const out=[];
+    for(let i=0;i<arguments.length;i++){
+      const seg=arguments[i];
+      for(let j=0;j<seg.length;j++){
+        if(out.length && out[out.length-1].x===seg[j].x && out[out.length-1].y===seg[j].y) continue;
+        out.push(seg[j]);
+      }
+    }
+    return out;
   }
 
-  function familyCore(){
+  function makePreset(){
     const cy=340;
-    const topRear=P(r(250,290),r(218,250));
-    const bottomRear=P(topRear[0]+r(-8,12),r(430,462));
-    const top1=P(r(390,450),r(188,218));
-    const top2=P(r(620,690),r(210,238));
-    const neckUpper=P(r(790,826),r(278,300));
-    const neckLower=P(neckUpper[0],r(380,402));
-    const low2=P(r(620,690),r(438,470));
-    const low1=P(r(390,450),r(468,500));
-    const t=tail(pick([0,0,2]),topRear,bottomRear,cy);
-    const sk=[topRear,top1,top2,neckUpper,neckLower,low2,low1,...t];
-    let d=`M ${S(topRear)} L ${S(top1)} L ${S(top2)} L ${S(neckUpper)} L ${S(neckLower)} L ${S(low2)} L ${S(low1)}`;
-    for(const p of t)d+=` L ${S(p)}`;
-    d+=' Z';
-    return {d,sk};
-  }
+    const family=pick(['strand','vader','klein','q']);
+    const tailX=pick([178,188,198,208,218]);
+    const notchHalf=pick([28,32,36]);
+    const notchDepth=pick([60,72,84,96]);
 
-  function familyErgo(){
-    const cy=340;
-    const topRear=P(r(248,280),r(190,220));
-    const upperA=P(r(410,470),r(118,150));
-    const upperWaist=P(r(620,670),r(188,220));
-    const upperHorn=P(r(810,842),r(150,190));
-    const upperValley=P(r(690,735),r(278,304));
-    const upperJoint=P(r(792,820),r(314,326));
-    const lowerJoint=P(upperJoint[0],r(354,366));
-    const lowerValley=P(r(680,725),r(382,404));
-    const lowerHorn=P(r(802,838),r(456,492));
-    const lowerWaist=P(r(600,660),r(448,482));
-    const lowerA=P(r(390,455),r(520,560));
-    const bottomRear=P(r(248,282),r(462,498));
-    const t=tail(pick([0,1,2]),topRear,bottomRear,cy);
-    const sk=[topRear,upperA,upperWaist,upperHorn,upperValley,upperJoint,lowerJoint,lowerValley,lowerHorn,lowerWaist,lowerA,...t];
-    const c1=P((topRear[0]+upperA[0])*.52,upperA[1]-r(8,18));
-    const c2=P((lowerA[0]+bottomRear[0])*.48,lowerA[1]+r(4,14));
-    let d=`M ${S(topRear)} Q ${S(c1)} ${S(upperA)} L ${S(upperWaist)} L ${S(upperHorn)} L ${S(upperValley)} Q ${S(upperJoint)} ${S(upperJoint)} L ${S(lowerJoint)} Q ${S(lowerValley)} ${S(lowerValley)} L ${S(lowerHorn)} L ${S(lowerWaist)} L ${S(lowerA)} Q ${S(c2)} ${S(bottomRear)}`;
-    for(const p of t)d+=` L ${S(p)}`;
-    d+=' Z';
-    sk.splice(1,0,c1); sk.splice(sk.length-t.length,0,c2);
-    return {d,sk};
-  }
+    let rear, upper, lower, hornU, hornL, tail;
+    if(family==='strand'){
+      rear ={cx:328, cy:340, r:192};
+      upper={cx:536, cy:220, r:164};
+      lower={cx:548, cy:456, r:174};
+      hornU={cx:752, cy:246, r:92};
+      hornL={cx:746, cy:422, r:84};
+      tail ={cx:246, cy:340, r:84};
+    }else if(family==='vader'){
+      rear ={cx:316, cy:346, r:178};
+      upper={cx:514, cy:194, r:178};
+      lower={cx:528, cy:486, r:166};
+      hornU={cx:784, cy:220, r:110};
+      hornL={cx:804, cy:440, r:74};
+      tail ={cx:236, cy:340, r:76};
+    }else if(family==='klein'){
+      rear ={cx:352, cy:350, r:210};
+      upper={cx:588, cy:212, r:136};
+      lower={cx:564, cy:452, r:178};
+      hornU={cx:734, cy:254, r:82};
+      hornL={cx:718, cy:420, r:122};
+      tail ={cx:258, cy:340, r:96};
+    }else{
+      rear ={cx:330, cy:340, r:184};
+      upper={cx:538, cy:216, r:154};
+      lower={cx:538, cy:464, r:164};
+      hornU={cx:758, cy:236, r:96};
+      hornL={cx:758, cy:444, r:96};
+      tail ={cx:242, cy:340, r:82};
+    }
 
-  function familyOffset(){
-    const cy=340;
-    const topRear=P(r(292,330),r(158,190));
-    const crown=P(r(500,560),r(142,168));
-    const upperHorn=P(r(790,825),r(190,224));
-    const upperValley=P(r(690,730),r(278,300));
-    const upperJoint=P(r(790,815),r(316,328));
-    const lowerJoint=P(upperJoint[0],r(354,366));
-    const lowerValley=P(r(650,700),r(396,420));
-    const lowerTip=P(r(770,816),r(462,496));
-    const belly=P(r(430,500),r(544,574));
-    const bottomRear=P(r(220,260),r(492,530));
-    const t=tail(pick([1,2]),topRear,bottomRear,cy);
-    const cTop=P(r(410,455),r(132,150));
-    const cBelly=P(r(315,360),r(570,590));
-    const sk=[topRear,cTop,crown,upperHorn,upperValley,upperJoint,lowerJoint,lowerValley,lowerTip,belly,cBelly,bottomRear,...t];
-    let d=`M ${S(topRear)} Q ${S(cTop)} ${S(crown)} L ${S(upperHorn)} L ${S(upperValley)} Q ${S(upperJoint)} ${S(upperJoint)} L ${S(lowerJoint)} L ${S(lowerValley)} L ${S(lowerTip)} Q ${S(belly)} ${S(belly)} Q ${S(cBelly)} ${S(bottomRear)}`;
-    for(const p of t)d+=` L ${S(p)}`;
-    d+=' Z';
-    return {d,sk};
-  }
+    [rear,upper,lower,hornU,hornL,tail].forEach(c=>{
+      c.cx=q(c.cx+rnd(-12,12));
+      c.cy=q(c.cy+rnd(-12,12));
+      c.r=q(c.r+rnd(-10,10));
+    });
 
-  function familyDouble(){
-    const cy=340;
-    const topRear=P(r(232,270),r(206,236));
-    const upperA=P(r(400,455),r(154,186));
-    const upperWaist=P(r(590,640),r(206,234));
-    const upperHorn=P(r(820,850),r(170,206));
-    const upperValley=P(r(690,730),r(286,304));
-    const upperJoint=P(r(790,816),r(316,328));
-    const lowerJoint=P(upperJoint[0],r(352,364));
-    const lowerValley=P(r(688,728),r(380,398));
-    const lowerHorn=P(r(820,850),r(472,510));
-    const lowerWaist=P(r(590,640),r(446,474));
-    const lowerA=P(r(395,455),r(500,532));
-    const bottomRear=P(r(232,270),r(444,476));
-    const t=tail(pick([0,1]),topRear,bottomRear,cy);
-    const sk=[topRear,upperA,upperWaist,upperHorn,upperValley,upperJoint,lowerJoint,lowerValley,lowerHorn,lowerWaist,lowerA,...t];
-    let d=`M ${S(topRear)} Q ${S(P((topRear[0]+upperA[0])*.5,upperA[1]))} ${S(upperA)} L ${S(upperWaist)} L ${S(upperHorn)} L ${S(upperValley)} Q ${S(upperJoint)} ${S(upperJoint)} L ${S(lowerJoint)} Q ${S(lowerValley)} ${S(lowerValley)} L ${S(lowerHorn)} L ${S(lowerWaist)} L ${S(lowerA)} Q ${S(P((lowerA[0]+bottomRear[0])*.5,lowerA[1]))} ${S(bottomRear)}`;
-    for(const p of t)d+=` L ${S(p)}`;
-    d+=' Z';
-    return {d,sk};
+    return {family,cy,tailX,notchHalf,notchDepth,rear,upper,lower,hornU,hornL,tail};
   }
-
-  function familyBlade(){
-    const cy=340;
-    const topRear=P(r(250,285),r(176,206));
-    const a=P(r(420,470),r(118,148));
-    const b=P(r(610,660),r(178,206));
-    const upperHorn=P(r(808,842),r(154,184));
-    const upperValley=P(r(700,735),r(284,302));
-    const upperJoint=P(r(790,816),r(316,328));
-    const lowerJoint=P(upperJoint[0],r(352,364));
-    const lowerValley=P(r(680,720),r(392,412));
-    const lowerHorn=P(r(814,846),r(454,486));
-    const c=P(r(585,640),r(514,546));
-    const d0=P(r(355,415),r(526,558));
-    const bottomRear=P(r(238,278),r(470,500));
-    const t=tail(pick([1,2]),topRear,bottomRear,cy);
-    const sk=[topRear,a,b,upperHorn,upperValley,upperJoint,lowerJoint,lowerValley,lowerHorn,c,d0,bottomRear,...t];
-    let d=`M ${sk.map(S).join(' L ')} Z`;
-    return {d,sk};
-  }
-
-  function familySplit(){
-    const cy=340;
-    const topRear=P(r(258,292),r(198,226));
-    const upperBack=P(r(390,440),r(138,168));
-    const upperPlate=P(r(560,620),r(172,202));
-    const upperHorn=P(r(800,838),r(188,220));
-    const upperValley=P(r(670,716),r(292,308));
-    const upperJoint=P(r(790,816),r(316,328));
-    const lowerJoint=P(upperJoint[0],r(352,364));
-    const lowerValley=P(r(640,690),r(390,410));
-    const lowerBlade=P(r(760,810),r(506,540));
-    const lowerPlate=P(r(520,580),r(500,530));
-    const bottomRear=P(r(250,286),r(452,484));
-    const t=tail(2,topRear,bottomRear,cy);
-    const sk=[topRear,upperBack,upperPlate,upperHorn,upperValley,upperJoint,lowerJoint,lowerValley,lowerBlade,lowerPlate,bottomRear,...t];
-    let d=`M ${S(topRear)} L ${S(upperBack)} L ${S(upperPlate)} L ${S(upperHorn)} L ${S(upperValley)} Q ${S(upperJoint)} ${S(upperJoint)} L ${S(lowerJoint)} L ${S(lowerValley)} L ${S(lowerBlade)} L ${S(lowerPlate)} L ${S(bottomRear)}`;
-    for(const p of t)d+=` L ${S(p)}`;
-    d+=' Z';
-    return {d,sk};
-  }
-
-  const families=[familyCore,familyErgo,familyOffset,familyDouble,familyBlade,familySplit];
 
   function generate(){
-    const result=pick(families)();
-    body.setAttribute('d',result.d);
-    guide.setAttribute('d',polyGuide(result.sk));
+    guideGroup.replaceChildren();
+    const g=makePreset();
+    const {family,cy,tailX,notchHalf,notchDepth,rear,upper,lower,hornU,hornL,tail}=g;
+
+    [rear,upper,lower,hornU,hornL,tail].forEach(addCircle);
+
+    const rearUpper = circleIntersection(rear, upper, true);
+    const rearLower = circleIntersection(rear, lower, false);
+    const upperValley = circleIntersection(upper, hornU, false);
+    const lowerValley = circleIntersection(lower, hornL, true);
+
+    const upperHornPeak = circlePoint(hornU, family==='vader' ? -18 : family==='klein' ? -6 : -28);
+    const lowerHornPeak = circlePoint(hornL, family==='vader' ? 20 : family==='klein' ? 34 : 24);
+
+    const rearBackUpper = verticalCirclePoint(rear, cy-notchHalf-18, -1);
+    const rearBackLower = verticalCirclePoint(rear, cy+notchHalf+18, -1);
+
+    const tailTop = P(tailX, cy-notchHalf);
+    const tailTopInner = P(tailX+notchDepth, cy-notchHalf);
+    const tailBottomInner = P(tailX+notchDepth, cy+notchHalf);
+    const tailBottom = P(tailX, cy+notchHalf);
+
+    [rearUpper,rearLower,upperValley,lowerValley,upperHornPeak,lowerHornPeak,rearBackUpper,rearBackLower].forEach(addCross);
+    [tailTop,tailTopInner,tailBottomInner,tailBottom].forEach(addCross);
+    addLine(tailTop,tailTopInner);
+    addLine(tailTopInner,tailBottomInner);
+    addLine(tailBottomInner,tailBottom);
+    addLine(tailBottom,rearBackLower);
+    addLine(rearBackUpper,tailTop);
+    addLine(lowerHornPeak,upperHornPeak);
+
+    const seg1=[tailTop,tailTopInner,tailBottomInner,tailBottom,rearBackLower];
+    const seg2=sampleArc(rear,rearBackLower,rearLower,'cw',10);
+    const seg3=sampleArc(lower,rearLower,lowerValley,'ccw',14);
+    const seg4=sampleArc(hornL,lowerValley,lowerHornPeak,'cw',12);
+    const seg5=[upperHornPeak];
+    const seg6=sampleArc(hornU,upperHornPeak,upperValley,'cw',12);
+    const seg7=sampleArc(upper,upperValley,rearUpper,'ccw',14);
+    const seg8=sampleArc(rear,rearUpper,rearBackUpper,'ccw',10);
+    const seg9=[tailTop];
+
+    const pts=combine(seg1,seg2,seg3,seg4,seg5,seg6,seg7,seg8,seg9);
+    body.setAttribute('d',pathFromPts(pts));
   }
 
   document.getElementById('regen').addEventListener('click',generate);
