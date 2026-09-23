@@ -5,77 +5,132 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Geometric Guitar Body</title>
 <style>
-html,body{margin:0;width:100%;height:100%;background:#fff;overflow:hidden}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff}
 body{display:flex;flex-direction:column}
 svg{flex:1;width:100%;min-height:0;display:block;background:#fff}
-#guide{fill:none;stroke:#000;stroke-width:1.25;stroke-dasharray:5 7;vector-effect:non-scaling-stroke}
-#body{fill:none;stroke:#000;stroke-width:2.25;vector-effect:non-scaling-stroke;stroke-linejoin:round}
-button{border:0;border-top:1px solid #000;background:#fff;color:#000;border-radius:0;font:16px -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;padding:16px 0 calc(16px + env(safe-area-inset-bottom));width:100%}
+.construction{fill:none;stroke:#000;stroke-width:1;stroke-dasharray:4 7;opacity:.55;vector-effect:non-scaling-stroke}
+.body{fill:none;stroke:#000;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+button{appearance:none;width:100%;border:0;border-top:1px solid #000;border-radius:0;background:#fff;color:#000;font:16px -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;padding:16px 0 calc(16px + env(safe-area-inset-bottom));cursor:pointer}
+button:active{background:#f4f4f4}
 </style>
 </head>
 <body>
-<svg viewBox="0 0 1000 680" preserveAspectRatio="xMidYMid meet">
-  <path id="guide" d="M 768.75 340 C 768.75 240 660 150 500 150 C 350 150 268 240 268 340 C 268 440 350 551 500 551 C 660 551 768.75 440 768.75 340 Z"/>
-  <path id="body" d="M 268 310 C 285 220 375 150 500 150 C 660 150 768.75 240 768.75 340 C 768.75 440 660 551 500 551 C 375 551 285 460 268 370 L 340 370 L 340 310 Z"/>
+<svg id="stage" viewBox="0 0 1000 680" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+  <g id="construction">
+    <ellipse class="construction" cx="330" cy="340" rx="165" ry="178"/>
+    <ellipse class="construction" cx="560" cy="245" rx="180" ry="112"/>
+    <ellipse class="construction" cx="565" cy="435" rx="190" ry="118"/>
+    <ellipse class="construction" cx="705" cy="340" rx="100" ry="155"/>
+  </g>
+  <path id="body" class="body" d="M 250 306 L 326 306 L 326 374 L 250 374 A 178 178 0 0 0 356 514 L 520 532 A 170 120 0 0 0 748 400 L 770 392 L 770 288 L 748 280 A 165 112 0 0 0 520 148 L 360 164 A 176 176 0 0 0 250 306 Z"/>
 </svg>
 <button id="regen">再生成</button>
 <script>
 (()=>{
-  const g=document.getElementById('guide');
-  const b=document.getElementById('body');
-  const N=360,cx=500,cy=340;
+  const svg=document.getElementById('stage');
+  const body=document.getElementById('body');
+  const construction=document.getElementById('construction');
+  const NS='http://www.w3.org/2000/svg';
+  const rnd=(a,b)=>a+Math.random()*(b-a);
+  const irnd=(a,b)=>Math.floor(rnd(a,b+1));
+  const pick=a=>a[irnd(0,a.length-1)];
 
-  const closedPath=pts=>{
-    let d=`M ${pts[0][0].toFixed(2)} ${pts[0][1].toFixed(2)}`;
-    for(let i=1;i<pts.length;i++) d+=` L ${pts[i][0].toFixed(2)} ${pts[i][1].toFixed(2)}`;
-    return d+' Z';
-  };
+  function ellipse(cx,cy,rx,ry){
+    const e=document.createElementNS(NS,'ellipse');
+    e.setAttribute('class','construction');
+    e.setAttribute('cx',cx.toFixed(1));
+    e.setAttribute('cy',cy.toFixed(1));
+    e.setAttribute('rx',rx.toFixed(1));
+    e.setAttribute('ry',ry.toFixed(1));
+    construction.appendChild(e);
+  }
+
+  function arc(rx,ry,sweep,x,y,large=0){
+    return `A ${rx.toFixed(1)} ${ry.toFixed(1)} 0 ${large} ${sweep} ${x.toFixed(1)} ${y.toFixed(1)}`;
+  }
 
   function generate(){
-    const a=235+Math.random()*45;
-    const bb=195+Math.random()*38;
-    const waist=.15+Math.random()*.16;
-    const h3=.025+Math.random()*.06;
-    const h5=.01+Math.random()*.035;
-    const asym=(Math.random()-.5)*.10;
-    const phase=(Math.random()-.5)*1.2;
-    const pts=[];
+    const cy=340;
 
-    for(let i=0;i<N;i++){
-      const t=Math.PI*2*i/N;
-      let x=a*Math.cos(t);
-      let y=bb*Math.sin(t);
-      y*=1-waist*Math.pow(Math.sin(2*t),2);
-      x*=1+h3*Math.cos(3*t+phase)+h5*Math.cos(5*t-phase*.5);
-      y*=1+.035*Math.cos(2*t)+asym*Math.sin(t);
-      pts.push([cx+x,cy+y]);
+    // A small grid of exact ratios keeps the random results designed rather than noisy.
+    const tailX=pick([220,235,250,265]);
+    const neckX=pick([755,770,785,800]);
+    const notchHalf=pick([26,30,34,38]);
+    const notchDepth=pick([62,74,86,98]);
+    const notchInnerX=tailX+notchDepth;
+
+    const rearRx=pick([145,160,175,190]);
+    const rearRy=pick([150,165,180,195]);
+    const frontRx=pick([150,170,190,210]);
+    const upperRy=pick([92,108,124,140]);
+    const lowerRy=pick([98,116,134,152]);
+
+    const upperPeakX=pick([430,455,480,505]);
+    const lowerPeakX=upperPeakX+rnd(-22,32);
+    const upperY=cy-pick([168,184,200]);
+    const lowerY=cy+pick([170,188,206]);
+
+    const upperShoulderX=pick([625,650,675]);
+    const lowerShoulderX=upperShoulderX+rnd(-18,28);
+    const neckHalf=pick([44,50,56,62]);
+    const neckUpperY=cy-neckHalf;
+    const neckLowerY=cy+neckHalf;
+
+    // Straight sections are intentionally short; most of the outline is composed from ellipse arcs.
+    const tailTopY=cy-notchHalf;
+    const tailBottomY=cy+notchHalf;
+    const rearUpperJoinX=tailX+rnd(70,112);
+    const rearLowerJoinX=tailX+rnd(72,116);
+
+    const upperChamfer=pick([0,1,1]);
+    const lowerChamfer=pick([0,1,1]);
+
+    let d=`M ${tailX} ${tailTopY}`;
+    d+=` L ${notchInnerX} ${tailTopY}`;
+    d+=` L ${notchInnerX} ${tailBottomY}`;
+    d+=` L ${tailX} ${tailBottomY}`;
+
+    // rear lower lobe
+    d+=' '+arc(rearRx,rearRy,0,rearLowerJoinX,lowerY-22);
+    if(lowerChamfer){
+      d+=` L ${lowerPeakX-22} ${lowerY}`;
     }
+    d+=' '+arc(frontRx,lowerRy,0,lowerShoulderX,cy+112);
+    d+=' '+arc(frontRx*.72,lowerRy*.82,0,neckX,neckLowerY);
 
-    g.setAttribute('d',closedPath(pts));
-
-    const minX=Math.min(...pts.map(p=>p[0]));
-    const half=24+Math.random()*17;
-    const inner=minX+55+Math.random()*36;
-    let ti=0,bi=0,td=Infinity,bd=Infinity;
-
-    for(let i=0;i<N;i++){
-      if(pts[i][0]<cx){
-        const d1=Math.abs(pts[i][1]-(cy-half));
-        const d2=Math.abs(pts[i][1]-(cy+half));
-        if(d1<td){td=d1;ti=i}
-        if(d2<bd){bd=d2;bi=i}
-      }
+    // neck-side geometric face
+    const faceInset=pick([0,10,18,26]);
+    if(faceInset){
+      d+=` L ${neckX-faceInset} ${cy+18}`;
+      d+=` L ${neckX-faceInset} ${cy-18}`;
     }
+    d+=` L ${neckX} ${neckUpperY}`;
 
-    const out=[pts[ti]];
-    let j=(ti+1)%N,guard=0;
-    while(j!==bi&&guard++<N+2){out.push(pts[j]);j=(j+1)%N}
-    out.push(pts[bi]);
-    out.push([inner,cy+half],[inner,cy-half],[pts[ti][0],cy-half]);
-    b.setAttribute('d',closedPath(out));
+    // upper front and upper rear lobe
+    d+=' '+arc(frontRx*.72,upperRy*.82,0,upperShoulderX,cy-112);
+    d+=' '+arc(frontRx,upperRy,0,upperPeakX+22,upperY);
+    if(upperChamfer){
+      d+=` L ${rearUpperJoinX} ${upperY+20}`;
+    }
+    d+=' '+arc(rearRx,rearRy,0,tailX,tailTopY);
+    d+=' Z';
+    body.setAttribute('d',d);
+
+    // Construction geometry: only dotted mathematical curves, no labels or icons.
+    construction.replaceChildren();
+    ellipse(tailX+rearRx*.55,cy,rearRx,rearRy);
+    ellipse(upperPeakX+frontRx*.42,upperY+upperRy*.76,frontRx,upperRy);
+    ellipse(lowerPeakX+frontRx*.42,lowerY-lowerRy*.76,frontRx,lowerRy);
+    ellipse(neckX-frontRx*.34,cy,frontRx*.72,(upperRy+lowerRy)*.55);
+
+    // Occasionally add one nested proportion curve to make the construction visibly geometric.
+    if(Math.random()>.45){
+      ellipse((tailX+neckX)/2,cy,(neckX-tailX)*.34,(lowerY-upperY)*.31);
+    }
   }
 
   document.getElementById('regen').addEventListener('click',generate);
+  generate();
 })();
 </script>
 </body>
