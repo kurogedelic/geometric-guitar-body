@@ -8,125 +8,106 @@
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff}
 body{display:flex;flex-direction:column}
 svg{flex:1;width:100%;min-height:0;display:block;background:#fff}
-.construction{fill:none;stroke:#000;stroke-width:1;stroke-dasharray:4 7;opacity:.55;vector-effect:non-scaling-stroke}
-.body{fill:none;stroke:#000;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.guide{fill:none;stroke:#000;stroke-width:1;stroke-dasharray:5 7;opacity:.48;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
+.body{fill:none;stroke:#000;stroke-width:2.2;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
 button{appearance:none;width:100%;border:0;border-top:1px solid #000;border-radius:0;background:#fff;color:#000;font:16px -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;padding:16px 0 calc(16px + env(safe-area-inset-bottom));cursor:pointer}
 button:active{background:#f4f4f4}
 </style>
 </head>
 <body>
 <svg id="stage" viewBox="0 0 1000 680" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-  <g id="construction">
-    <ellipse class="construction" cx="330" cy="340" rx="165" ry="178"/>
-    <ellipse class="construction" cx="560" cy="245" rx="180" ry="112"/>
-    <ellipse class="construction" cx="565" cy="435" rx="190" ry="118"/>
-    <ellipse class="construction" cx="705" cy="340" rx="100" ry="155"/>
-  </g>
-  <path id="body" class="body" d="M 250 306 L 326 306 L 326 374 L 250 374 A 178 178 0 0 0 356 514 L 520 532 A 170 120 0 0 0 748 400 L 770 392 L 770 288 L 748 280 A 165 112 0 0 0 520 148 L 360 164 A 176 176 0 0 0 250 306 Z"/>
+  <path id="guide" class="guide" d="M220 306 L310 306 L220 374 L304 456 L438 542 L610 500 L804 398 L804 282 L620 184 L452 140 L304 220 Z"/>
+  <path id="body" class="body" d="M220 306 L310 306 L310 374 L220 374 L304 456 Q356 528 438 542 L610 500 Q716 470 804 398 L804 282 Q716 210 620 184 L452 140 Q356 152 304 220 L220 306 Z"/>
 </svg>
 <button id="regen">再生成</button>
 <script>
 (()=>{
-  const svg=document.getElementById('stage');
   const body=document.getElementById('body');
-  const construction=document.getElementById('construction');
-  const NS='http://www.w3.org/2000/svg';
-  const rnd=(a,b)=>a+Math.random()*(b-a);
-  const irnd=(a,b)=>Math.floor(rnd(a,b+1));
-  const pick=a=>a[irnd(0,a.length-1)];
-
-  function ellipse(cx,cy,rx,ry){
-    const e=document.createElementNS(NS,'ellipse');
-    e.setAttribute('class','construction');
-    e.setAttribute('cx',cx.toFixed(1));
-    e.setAttribute('cy',cy.toFixed(1));
-    e.setAttribute('rx',rx.toFixed(1));
-    e.setAttribute('ry',ry.toFixed(1));
-    construction.appendChild(e);
-  }
-
-  function arc(rx,ry,sweep,x,y,large=0){
-    return `A ${rx.toFixed(1)} ${ry.toFixed(1)} 0 ${large} ${sweep} ${x.toFixed(1)} ${y.toFixed(1)}`;
-  }
+  const guide=document.getElementById('guide');
+  const r=(a,b)=>a+Math.random()*(b-a);
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const q=(v,s=4)=>Math.round(v/s)*s;
+  const P=(x,y)=>[q(x),q(y)];
+  const s=p=>`${p[0]} ${p[1]}`;
 
   function generate(){
     const cy=340;
+    const tailX=pick([196,208,220,232]);
+    const neckX=pick([792,804,816,828]);
+    const notchHalf=pick([28,32,36]);
+    const notchDepth=pick([74,86,98]);
+    const innerX=tailX+notchDepth;
 
-    // A small grid of exact ratios keeps the random results designed rather than noisy.
-    const tailX=pick([220,235,250,265]);
-    const neckX=pick([755,770,785,800]);
-    const notchHalf=pick([26,30,34,38]);
-    const notchDepth=pick([62,74,86,98]);
-    const notchInnerX=tailX+notchDepth;
+    const family=Math.floor(Math.random()*4);
+    const span=neckX-tailX;
 
-    const rearRx=pick([145,160,175,190]);
-    const rearRy=pick([150,165,180,195]);
-    const frontRx=pick([150,170,190,210]);
-    const upperRy=pick([92,108,124,140]);
-    const lowerRy=pick([98,116,134,152]);
+    let rearLower, lowerApex, lowerWaist, neckLower;
+    let neckUpper, upperWaist, upperApex, rearUpper;
 
-    const upperPeakX=pick([430,455,480,505]);
-    const lowerPeakX=upperPeakX+rnd(-22,32);
-    const upperY=cy-pick([168,184,200]);
-    const lowerY=cy+pick([170,188,206]);
-
-    const upperShoulderX=pick([625,650,675]);
-    const lowerShoulderX=upperShoulderX+rnd(-18,28);
-    const neckHalf=pick([44,50,56,62]);
-    const neckUpperY=cy-neckHalf;
-    const neckLowerY=cy+neckHalf;
-
-    // Straight sections are intentionally short; most of the outline is composed from ellipse arcs.
-    const tailTopY=cy-notchHalf;
-    const tailBottomY=cy+notchHalf;
-    const rearUpperJoinX=tailX+rnd(70,112);
-    const rearLowerJoinX=tailX+rnd(72,116);
-
-    const upperChamfer=pick([0,1,1]);
-    const lowerChamfer=pick([0,1,1]);
-
-    let d=`M ${tailX} ${tailTopY}`;
-    d+=` L ${notchInnerX} ${tailTopY}`;
-    d+=` L ${notchInnerX} ${tailBottomY}`;
-    d+=` L ${tailX} ${tailBottomY}`;
-
-    // rear lower lobe
-    d+=' '+arc(rearRx,rearRy,0,rearLowerJoinX,lowerY-22);
-    if(lowerChamfer){
-      d+=` L ${lowerPeakX-22} ${lowerY}`;
+    if(family===0){
+      // long lower wedge, compact upper shoulder
+      rearLower=P(tailX+r(.12,.17)*span,cy+r(104,132));
+      lowerApex=P(tailX+r(.32,.40)*span,cy+r(188,220));
+      lowerWaist=P(tailX+r(.60,.68)*span,cy+r(142,174));
+      upperWaist=P(tailX+r(.62,.70)*span,cy-r(118,150));
+      upperApex=P(tailX+r(.34,.42)*span,cy-r(172,204));
+      rearUpper=P(tailX+r(.13,.18)*span,cy-r(112,140));
+    }else if(family===1){
+      // asymmetric faceted diamond
+      rearLower=P(tailX+r(.14,.20)*span,cy+r(126,158));
+      lowerApex=P(tailX+r(.38,.46)*span,cy+r(178,210));
+      lowerWaist=P(tailX+r(.65,.72)*span,cy+r(112,146));
+      upperWaist=P(tailX+r(.57,.64)*span,cy-r(154,186));
+      upperApex=P(tailX+r(.29,.36)*span,cy-r(206,232));
+      rearUpper=P(tailX+r(.12,.17)*span,cy-r(96,124));
+    }else if(family===2){
+      // narrow waist, broad tail geometry
+      rearLower=P(tailX+r(.11,.16)*span,cy+r(146,174));
+      lowerApex=P(tailX+r(.27,.34)*span,cy+r(204,228));
+      lowerWaist=P(tailX+r(.58,.64)*span,cy+r(118,142));
+      upperWaist=P(tailX+r(.58,.64)*span,cy-r(118,142));
+      upperApex=P(tailX+r(.27,.34)*span,cy-r(204,228));
+      rearUpper=P(tailX+r(.11,.16)*span,cy-r(146,174));
+    }else{
+      // offset blade: upper mass forward, lower mass rearward
+      rearLower=P(tailX+r(.13,.19)*span,cy+r(120,150));
+      lowerApex=P(tailX+r(.29,.37)*span,cy+r(190,218));
+      lowerWaist=P(tailX+r(.61,.68)*span,cy+r(154,182));
+      upperWaist=P(tailX+r(.68,.75)*span,cy-r(104,132));
+      upperApex=P(tailX+r(.40,.48)*span,cy-r(188,218));
+      rearUpper=P(tailX+r(.15,.20)*span,cy-r(132,162));
     }
-    d+=' '+arc(frontRx,lowerRy,0,lowerShoulderX,cy+112);
-    d+=' '+arc(frontRx*.72,lowerRy*.82,0,neckX,neckLowerY);
 
-    // neck-side geometric face
-    const faceInset=pick([0,10,18,26]);
-    if(faceInset){
-      d+=` L ${neckX-faceInset} ${cy+18}`;
-      d+=` L ${neckX-faceInset} ${cy-18}`;
-    }
-    d+=` L ${neckX} ${neckUpperY}`;
+    neckLower=P(neckX,cy+pick([54,60,66,72]));
+    neckUpper=P(neckX,cy-pick([54,60,66,72]));
 
-    // upper front and upper rear lobe
-    d+=' '+arc(frontRx*.72,upperRy*.82,0,upperShoulderX,cy-112);
-    d+=' '+arc(frontRx,upperRy,0,upperPeakX+22,upperY);
-    if(upperChamfer){
-      d+=` L ${rearUpperJoinX} ${upperY+20}`;
-    }
-    d+=' '+arc(rearRx,rearRy,0,tailX,tailTopY);
-    d+=' Z';
+    const tailTop=P(tailX,cy-notchHalf);
+    const notchTop=P(innerX,cy-notchHalf);
+    const notchBottom=P(innerX,cy+notchHalf);
+    const tailBottom=P(tailX,cy+notchHalf);
+
+    // Control points are derived from neighboring vertices, not independent random blobs.
+    const cLower1=P((rearLower[0]+lowerApex[0])*.5, lowerApex[1]+r(-8,18));
+    const cLower2=P((lowerWaist[0]+neckLower[0])*.5, lowerWaist[1]+r(-18,10));
+    const cUpper2=P((upperWaist[0]+neckUpper[0])*.5, upperWaist[1]+r(-10,18));
+    const cUpper1=P((rearUpper[0]+upperApex[0])*.5, upperApex[1]+r(-18,8));
+
+    // Solid outline: deliberately alternates hard edges and restrained curves.
+    let d=`M ${s(tailTop)} L ${s(notchTop)} L ${s(notchBottom)} L ${s(tailBottom)}`;
+    d+=` L ${s(rearLower)}`;
+    d+=` Q ${s(cLower1)} ${s(lowerApex)}`;
+    d+=` L ${s(lowerWaist)}`;
+    d+=` Q ${s(cLower2)} ${s(neckLower)}`;
+    d+=` L ${s(neckUpper)}`;
+    d+=` Q ${s(cUpper2)} ${s(upperWaist)}`;
+    d+=` L ${s(upperApex)}`;
+    d+=` Q ${s(cUpper1)} ${s(rearUpper)}`;
+    d+=` L ${s(tailTop)} Z`;
     body.setAttribute('d',d);
 
-    // Construction geometry: only dotted mathematical curves, no labels or icons.
-    construction.replaceChildren();
-    ellipse(tailX+rearRx*.55,cy,rearRx,rearRy);
-    ellipse(upperPeakX+frontRx*.42,upperY+upperRy*.76,frontRx,upperRy);
-    ellipse(lowerPeakX+frontRx*.42,lowerY-lowerRy*.76,frontRx,lowerRy);
-    ellipse(neckX-frontRx*.34,cy,frontRx*.72,(upperRy+lowerRy)*.55);
-
-    // Occasionally add one nested proportion curve to make the construction visibly geometric.
-    if(Math.random()>.45){
-      ellipse((tailX+neckX)/2,cy,(neckX-tailX)*.34,(lowerY-upperY)*.31);
-    }
+    // Dotted construction = the actual geometric skeleton/control polygon. No circles.
+    const gd=[tailTop,notchTop,notchBottom,tailBottom,rearLower,cLower1,lowerApex,lowerWaist,cLower2,neckLower,neckUpper,cUpper2,upperWaist,upperApex,cUpper1,rearUpper,tailTop];
+    guide.setAttribute('d','M '+gd.map(s).join(' L '));
   }
 
   document.getElementById('regen').addEventListener('click',generate);
