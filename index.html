@@ -8,16 +8,16 @@
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff}
 body{display:flex;flex-direction:column}
 svg{flex:1;width:100%;min-height:0;display:block;background:#fff}
-.guide{fill:none;stroke:#000;stroke-width:1;stroke-dasharray:5 7;opacity:.48;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
+.guide{fill:none;stroke:#000;stroke-width:1;stroke-dasharray:5 7;opacity:.42;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
 .body{fill:none;stroke:#000;stroke-width:2.2;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
 button{appearance:none;width:100%;border:0;border-top:1px solid #000;border-radius:0;background:#fff;color:#000;font:16px -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;padding:16px 0 calc(16px + env(safe-area-inset-bottom));cursor:pointer}
 button:active{background:#f4f4f4}
 </style>
 </head>
 <body>
-<svg id="stage" viewBox="0 0 1000 680" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-  <path id="guide" class="guide" d="M220 306 L310 306 L220 374 L304 456 L438 542 L610 500 L790 420 L706 370 L804 400 L778 352 L720 340 L778 328 L804 280 L706 310 L790 260 L620 184 L452 140 L304 220 Z"/>
-  <path id="body" class="body" d="M220 306 L310 306 L310 374 L220 374 L304 456 Q356 528 438 542 L610 500 Q700 470 790 420 L706 370 Q760 400 804 400 L778 352 L720 340 L778 328 L804 280 Q760 280 706 310 L790 260 Q710 210 620 184 L452 140 Q356 152 304 220 L220 306 Z"/>
+<svg viewBox="0 0 1000 680" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+  <path id="guide" class="guide" d="M260 195 L430 130 L650 195 L825 165 L710 292 L800 318 L800 362 L700 392 L825 478 L600 520 L390 540 L260 480 L205 430 L315 390 L280 340 L315 290 L205 250 Z"/>
+  <path id="body" class="body" d="M260 195 L430 130 L650 195 L825 165 L710 292 Q760 318 800 318 L800 362 Q758 362 700 392 L825 478 L600 520 L390 540 L260 480 L205 430 L315 390 L280 340 L315 290 L205 250 Z"/>
 </svg>
 <button id="regen">再生成</button>
 <script>
@@ -26,102 +26,162 @@ button:active{background:#f4f4f4}
   const guide=document.getElementById('guide');
   const r=(a,b)=>a+Math.random()*(b-a);
   const pick=a=>a[Math.floor(Math.random()*a.length)];
-  const q=(v,s=4)=>Math.round(v/s)*s;
+  const q=v=>Math.round(v/4)*4;
   const P=(x,y)=>[q(x),q(y)];
-  const s=p=>`${p[0]} ${p[1]}`;
+  const S=p=>`${p[0]} ${p[1]}`;
+
+  function tail(mode,topRear,bottomRear,cy){
+    const tx=Math.min(topRear[0],bottomRear[0])-pick([36,48,60]);
+    const depth=pick([72,88,104,120]);
+    let pts=[];
+    if(mode===0){
+      pts=[bottomRear,P(tx,cy+92),P(tx+depth,cy+48),P(tx+depth,cy-48),P(tx,cy-92),topRear];
+    }else if(mode===1){
+      pts=[bottomRear,P(tx,cy+104),P(tx+depth+12,cy+68),P(tx+depth-26,cy+18),P(tx+depth-26,cy-18),P(tx+depth+12,cy-68),P(tx,cy-104),topRear];
+    }else{
+      pts=[bottomRear,P(tx+8,cy+104),P(tx+depth,cy+52),P(tx+depth-34,cy),P(tx+depth+16,cy-48),P(tx,cy-96),topRear];
+    }
+    return pts;
+  }
+
+  function polyGuide(points){
+    return 'M '+points.map(S).join(' L ');
+  }
+
+  function familyCore(){
+    const cy=340;
+    const topRear=P(r(250,290),r(218,250));
+    const bottomRear=P(topRear[0]+r(-8,12),r(430,462));
+    const top1=P(r(390,450),r(188,218));
+    const top2=P(r(620,690),r(210,238));
+    const neckUpper=P(r(790,826),r(278,300));
+    const neckLower=P(neckUpper[0],r(380,402));
+    const low2=P(r(620,690),r(438,470));
+    const low1=P(r(390,450),r(468,500));
+    const t=tail(pick([0,0,2]),topRear,bottomRear,cy);
+    const sk=[topRear,top1,top2,neckUpper,neckLower,low2,low1,...t];
+    let d=`M ${S(topRear)} L ${S(top1)} L ${S(top2)} L ${S(neckUpper)} L ${S(neckLower)} L ${S(low2)} L ${S(low1)}`;
+    for(const p of t)d+=` L ${S(p)}`;
+    d+=' Z';
+    return {d,sk};
+  }
+
+  function familyErgo(){
+    const cy=340;
+    const topRear=P(r(248,280),r(190,220));
+    const upperA=P(r(410,470),r(118,150));
+    const upperWaist=P(r(620,670),r(188,220));
+    const upperHorn=P(r(810,842),r(150,190));
+    const upperValley=P(r(690,735),r(278,304));
+    const upperJoint=P(r(792,820),r(314,326));
+    const lowerJoint=P(upperJoint[0],r(354,366));
+    const lowerValley=P(r(680,725),r(382,404));
+    const lowerHorn=P(r(802,838),r(456,492));
+    const lowerWaist=P(r(600,660),r(448,482));
+    const lowerA=P(r(390,455),r(520,560));
+    const bottomRear=P(r(248,282),r(462,498));
+    const t=tail(pick([0,1,2]),topRear,bottomRear,cy);
+    const sk=[topRear,upperA,upperWaist,upperHorn,upperValley,upperJoint,lowerJoint,lowerValley,lowerHorn,lowerWaist,lowerA,...t];
+    const c1=P((topRear[0]+upperA[0])*.52,upperA[1]-r(8,18));
+    const c2=P((lowerA[0]+bottomRear[0])*.48,lowerA[1]+r(4,14));
+    let d=`M ${S(topRear)} Q ${S(c1)} ${S(upperA)} L ${S(upperWaist)} L ${S(upperHorn)} L ${S(upperValley)} Q ${S(upperJoint)} ${S(upperJoint)} L ${S(lowerJoint)} Q ${S(lowerValley)} ${S(lowerValley)} L ${S(lowerHorn)} L ${S(lowerWaist)} L ${S(lowerA)} Q ${S(c2)} ${S(bottomRear)}`;
+    for(const p of t)d+=` L ${S(p)}`;
+    d+=' Z';
+    sk.splice(1,0,c1); sk.splice(sk.length-t.length,0,c2);
+    return {d,sk};
+  }
+
+  function familyOffset(){
+    const cy=340;
+    const topRear=P(r(292,330),r(158,190));
+    const crown=P(r(500,560),r(142,168));
+    const upperHorn=P(r(790,825),r(190,224));
+    const upperValley=P(r(690,730),r(278,300));
+    const upperJoint=P(r(790,815),r(316,328));
+    const lowerJoint=P(upperJoint[0],r(354,366));
+    const lowerValley=P(r(650,700),r(396,420));
+    const lowerTip=P(r(770,816),r(462,496));
+    const belly=P(r(430,500),r(544,574));
+    const bottomRear=P(r(220,260),r(492,530));
+    const t=tail(pick([1,2]),topRear,bottomRear,cy);
+    const cTop=P(r(410,455),r(132,150));
+    const cBelly=P(r(315,360),r(570,590));
+    const sk=[topRear,cTop,crown,upperHorn,upperValley,upperJoint,lowerJoint,lowerValley,lowerTip,belly,cBelly,bottomRear,...t];
+    let d=`M ${S(topRear)} Q ${S(cTop)} ${S(crown)} L ${S(upperHorn)} L ${S(upperValley)} Q ${S(upperJoint)} ${S(upperJoint)} L ${S(lowerJoint)} L ${S(lowerValley)} L ${S(lowerTip)} Q ${S(belly)} ${S(belly)} Q ${S(cBelly)} ${S(bottomRear)}`;
+    for(const p of t)d+=` L ${S(p)}`;
+    d+=' Z';
+    return {d,sk};
+  }
+
+  function familyDouble(){
+    const cy=340;
+    const topRear=P(r(232,270),r(206,236));
+    const upperA=P(r(400,455),r(154,186));
+    const upperWaist=P(r(590,640),r(206,234));
+    const upperHorn=P(r(820,850),r(170,206));
+    const upperValley=P(r(690,730),r(286,304));
+    const upperJoint=P(r(790,816),r(316,328));
+    const lowerJoint=P(upperJoint[0],r(352,364));
+    const lowerValley=P(r(688,728),r(380,398));
+    const lowerHorn=P(r(820,850),r(472,510));
+    const lowerWaist=P(r(590,640),r(446,474));
+    const lowerA=P(r(395,455),r(500,532));
+    const bottomRear=P(r(232,270),r(444,476));
+    const t=tail(pick([0,1]),topRear,bottomRear,cy);
+    const sk=[topRear,upperA,upperWaist,upperHorn,upperValley,upperJoint,lowerJoint,lowerValley,lowerHorn,lowerWaist,lowerA,...t];
+    let d=`M ${S(topRear)} Q ${S(P((topRear[0]+upperA[0])*.5,upperA[1]))} ${S(upperA)} L ${S(upperWaist)} L ${S(upperHorn)} L ${S(upperValley)} Q ${S(upperJoint)} ${S(upperJoint)} L ${S(lowerJoint)} Q ${S(lowerValley)} ${S(lowerValley)} L ${S(lowerHorn)} L ${S(lowerWaist)} L ${S(lowerA)} Q ${S(P((lowerA[0]+bottomRear[0])*.5,lowerA[1]))} ${S(bottomRear)}`;
+    for(const p of t)d+=` L ${S(p)}`;
+    d+=' Z';
+    return {d,sk};
+  }
+
+  function familyBlade(){
+    const cy=340;
+    const topRear=P(r(250,285),r(176,206));
+    const a=P(r(420,470),r(118,148));
+    const b=P(r(610,660),r(178,206));
+    const upperHorn=P(r(808,842),r(154,184));
+    const upperValley=P(r(700,735),r(284,302));
+    const upperJoint=P(r(790,816),r(316,328));
+    const lowerJoint=P(upperJoint[0],r(352,364));
+    const lowerValley=P(r(680,720),r(392,412));
+    const lowerHorn=P(r(814,846),r(454,486));
+    const c=P(r(585,640),r(514,546));
+    const d0=P(r(355,415),r(526,558));
+    const bottomRear=P(r(238,278),r(470,500));
+    const t=tail(pick([1,2]),topRear,bottomRear,cy);
+    const sk=[topRear,a,b,upperHorn,upperValley,upperJoint,lowerJoint,lowerValley,lowerHorn,c,d0,bottomRear,...t];
+    let d=`M ${sk.map(S).join(' L ')} Z`;
+    return {d,sk};
+  }
+
+  function familySplit(){
+    const cy=340;
+    const topRear=P(r(258,292),r(198,226));
+    const upperBack=P(r(390,440),r(138,168));
+    const upperPlate=P(r(560,620),r(172,202));
+    const upperHorn=P(r(800,838),r(188,220));
+    const upperValley=P(r(670,716),r(292,308));
+    const upperJoint=P(r(790,816),r(316,328));
+    const lowerJoint=P(upperJoint[0],r(352,364));
+    const lowerValley=P(r(640,690),r(390,410));
+    const lowerBlade=P(r(760,810),r(506,540));
+    const lowerPlate=P(r(520,580),r(500,530));
+    const bottomRear=P(r(250,286),r(452,484));
+    const t=tail(2,topRear,bottomRear,cy);
+    const sk=[topRear,upperBack,upperPlate,upperHorn,upperValley,upperJoint,lowerJoint,lowerValley,lowerBlade,lowerPlate,bottomRear,...t];
+    let d=`M ${S(topRear)} L ${S(upperBack)} L ${S(upperPlate)} L ${S(upperHorn)} L ${S(upperValley)} Q ${S(upperJoint)} ${S(upperJoint)} L ${S(lowerJoint)} L ${S(lowerValley)} L ${S(lowerBlade)} L ${S(lowerPlate)} L ${S(bottomRear)}`;
+    for(const p of t)d+=` L ${S(p)}`;
+    d+=' Z';
+    return {d,sk};
+  }
+
+  const families=[familyCore,familyErgo,familyOffset,familyDouble,familyBlade,familySplit];
 
   function generate(){
-    const cy=340;
-    const tailX=pick([196,208,220,232]);
-    const neckX=pick([792,804,816,828]);
-    const notchHalf=pick([28,32,36]);
-    const notchDepth=pick([74,86,98]);
-    const innerX=tailX+notchDepth;
-    const span=neckX-tailX;
-    const family=Math.floor(Math.random()*4);
-
-    let rearLower, lowerApex, lowerWaist;
-    let upperWaist, upperApex, rearUpper;
-
-    if(family===0){
-      rearLower=P(tailX+r(.12,.17)*span,cy+r(104,132));
-      lowerApex=P(tailX+r(.32,.40)*span,cy+r(188,220));
-      lowerWaist=P(tailX+r(.58,.66)*span,cy+r(136,168));
-      upperWaist=P(tailX+r(.60,.68)*span,cy-r(116,148));
-      upperApex=P(tailX+r(.34,.42)*span,cy-r(172,204));
-      rearUpper=P(tailX+r(.13,.18)*span,cy-r(112,140));
-    }else if(family===1){
-      rearLower=P(tailX+r(.14,.20)*span,cy+r(126,158));
-      lowerApex=P(tailX+r(.38,.46)*span,cy+r(178,210));
-      lowerWaist=P(tailX+r(.62,.69)*span,cy+r(110,144));
-      upperWaist=P(tailX+r(.55,.63)*span,cy-r(150,182));
-      upperApex=P(tailX+r(.29,.36)*span,cy-r(206,232));
-      rearUpper=P(tailX+r(.12,.17)*span,cy-r(96,124));
-    }else if(family===2){
-      rearLower=P(tailX+r(.11,.16)*span,cy+r(146,174));
-      lowerApex=P(tailX+r(.27,.34)*span,cy+r(204,228));
-      lowerWaist=P(tailX+r(.56,.63)*span,cy+r(116,140));
-      upperWaist=P(tailX+r(.56,.63)*span,cy-r(116,140));
-      upperApex=P(tailX+r(.27,.34)*span,cy-r(204,228));
-      rearUpper=P(tailX+r(.11,.16)*span,cy-r(146,174));
-    }else{
-      rearLower=P(tailX+r(.13,.19)*span,cy+r(120,150));
-      lowerApex=P(tailX+r(.29,.37)*span,cy+r(190,218));
-      lowerWaist=P(tailX+r(.59,.67)*span,cy+r(150,180));
-      upperWaist=P(tailX+r(.64,.72)*span,cy-r(104,132));
-      upperApex=P(tailX+r(.40,.48)*span,cy-r(188,218));
-      rearUpper=P(tailX+r(.15,.20)*span,cy-r(132,162));
-    }
-
-    const tailTop=P(tailX,cy-notchHalf);
-    const notchTop=P(innerX,cy-notchHalf);
-    const notchBottom=P(innerX,cy+notchHalf);
-    const tailBottom=P(tailX,cy+notchHalf);
-
-    const cLower1=P((rearLower[0]+lowerApex[0])*.5,lowerApex[1]+r(-8,18));
-    const cUpper1=P((rearUpper[0]+upperApex[0])*.5,upperApex[1]+r(-18,8));
-
-    // Neck-side architecture. Cutaways are structural, not decorative notches.
-    const cutMode=pick(['upper','double','double','deep','angular']);
-    const hornReach=pick([0,8,16,24]);
-    const jointHalf=pick([15,18,21]);
-    const upperHorn=P(neckX+hornReach,cy-pick([62,70,78,86]));
-    const lowerHorn=P(neckX+hornReach,cy+pick([62,70,78,86]));
-    const upperJoint=P(neckX-pick([8,12,16]),cy-jointHalf);
-    const lowerJoint=P(neckX-pick([8,12,16]),cy+jointHalf);
-
-    let upperDepth=pick([58,72,88,104]);
-    let lowerDepth=pick([54,68,82,96]);
-    if(cutMode==='deep'){upperDepth+=36;lowerDepth+=22;}
-
-    const upperValley=P(neckX-upperDepth,cy-pick([30,36,42,48]));
-    const lowerValley=P(neckX-lowerDepth,cy+pick([30,36,42,48]));
-    const lowerShoulder=P(neckX-r(90,132),cy+r(100,142));
-    const upperShoulder=P(neckX-r(90,132),cy-r(100,142));
-
-    let neckSolid='';
-    let neckGuide=[];
-
-    if(cutMode==='upper'){
-      const lowerEdge=P(neckX,cy+pick([56,64,72]));
-      neckSolid=` Q ${s(lowerShoulder)} ${s(lowerEdge)} L ${s(lowerJoint)} L ${s(upperValley)} Q ${s(upperHorn)} ${s(upperHorn)} L ${s(upperShoulder)}`;
-      neckGuide=[lowerShoulder,lowerEdge,lowerJoint,upperValley,upperHorn,upperShoulder];
-    }else if(cutMode==='angular'){
-      neckSolid=` L ${s(lowerShoulder)} L ${s(lowerHorn)} L ${s(lowerValley)} L ${s(lowerJoint)} L ${s(upperJoint)} L ${s(upperValley)} L ${s(upperHorn)} L ${s(upperShoulder)}`;
-      neckGuide=[lowerShoulder,lowerHorn,lowerValley,lowerJoint,upperJoint,upperValley,upperHorn,upperShoulder];
-    }else{
-      neckSolid=` Q ${s(lowerShoulder)} ${s(lowerHorn)} L ${s(lowerValley)} Q ${s(lowerJoint)} ${s(lowerJoint)} L ${s(upperJoint)} Q ${s(upperValley)} ${s(upperValley)} L ${s(upperHorn)} Q ${s(upperShoulder)} ${s(upperShoulder)}`;
-      neckGuide=[lowerShoulder,lowerHorn,lowerValley,lowerJoint,upperJoint,upperValley,upperHorn,upperShoulder];
-    }
-
-    let d=`M ${s(tailTop)} L ${s(notchTop)} L ${s(notchBottom)} L ${s(tailBottom)}`;
-    d+=` L ${s(rearLower)} Q ${s(cLower1)} ${s(lowerApex)} L ${s(lowerWaist)}`;
-    d+=neckSolid;
-    d+=` L ${s(upperWaist)} L ${s(upperApex)} Q ${s(cUpper1)} ${s(rearUpper)} L ${s(tailTop)} Z`;
-    body.setAttribute('d',d);
-
-    const gd=[tailTop,notchTop,notchBottom,tailBottom,rearLower,cLower1,lowerApex,lowerWaist,...neckGuide,upperWaist,upperApex,cUpper1,rearUpper,tailTop];
-    guide.setAttribute('d','M '+gd.map(s).join(' L '));
+    const result=pick(families)();
+    body.setAttribute('d',result.d);
+    guide.setAttribute('d',polyGuide(result.sk));
   }
 
   document.getElementById('regen').addEventListener('click',generate);
